@@ -80,7 +80,7 @@
         android:textAlignment="center"
         android:drawableStart="@drawable/ic_map"
         android:drawablePadding="2dp"
-        android:textSize="24sp"
+        android:textSize="22sp"
         android:id="@+id/btn_get_dir"/>
 
 </RelativeLayout>

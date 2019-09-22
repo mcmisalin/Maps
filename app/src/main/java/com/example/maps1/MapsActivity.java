@@ -6,16 +6,12 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
-import android.app.Dialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
-import android.os.Handler;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -24,24 +20,13 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
-import com.google.android.gms.common.GooglePlayServicesRepairableException;
-import com.google.android.gms.common.api.ApiException;
-import com.google.android.gms.common.api.PendingResult;
-import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -53,34 +38,16 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
-import com.google.android.libraries.places.api.Places;
-import com.google.android.libraries.places.api.model.AutocompletePrediction;
-import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
-import com.google.android.libraries.places.api.model.Place;
-import com.google.android.libraries.places.api.model.TypeFilter;
-import com.google.android.libraries.places.api.net.FetchPlaceRequest;
-import com.google.android.libraries.places.api.net.FetchPlaceResponse;
-import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest;
-import com.google.android.libraries.places.api.net.FindAutocompletePredictionsResponse;
-import com.google.android.libraries.places.api.net.PlacesClient;
-import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
-import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
-import com.example.maps1.models.PlaceInfo;
-
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, TaskLoadedCallback {
 
     //global variables
     private static final String TAG = "MapsActivity";
-    private static final int ERROR_DIALOG_REQUEST = 9001;
     private static final String FINE_LOCATION = Manifest.permission.ACCESS_FINE_LOCATION;
     private static final String COARSE_LOCATION = Manifest.permission.ACCESS_COARSE_LOCATION;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
@@ -88,20 +55,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     //variables
     private Boolean mLocationPermissionsGranted = false;
-    private FusedLocationProviderClient mFusedLocationProviderClient;
-    private LocationRequest locationRequest;
-    private LocationCallback locationCallback;
     private GoogleMap mMap;
     private List<Marker> mMarkers = new ArrayList<>();
-    private SupportMapFragment mapFragment;
-    private List<AutocompletePrediction> predictionList;
-    private PlacesClient placesClient;
     private Location currentLocation;
-    private PlaceInfo mPlace;
     private Marker mMarker;
     private MarkerOptions options;
     private MarkerOptions myOptions;
-    private View mapView;
     private Polyline currentPolyline;
     private String uUrl;
 
@@ -175,7 +134,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onClick(View view) {
                 Log.d(TAG, "onClick: clicked get directions");
                 try{
-                    uUrl = getUrl(myOptions.getPosition(),options.getPosition(),"driving");
+                    uUrl = getUrl(myOptions.getPosition(),options.getPosition());
                     new FetchURL(MapsActivity.this).execute(uUrl, "driving");
                 }catch(Exception e){
                     Log.d(TAG,"Exception: "+e.getMessage());
@@ -190,29 +149,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     //geoLocate()
     private void geoLocate(){
         Log.d(TAG,"geoLocate: geolocating");
-
         String searchString = mSearchText.getText().toString();
 
         Geocoder geocoder = new Geocoder(MapsActivity.this);
         List<Address> list;
         try {
-
            list = geocoder.getFromLocationName(searchString, 6);
 
             Address address;
             if(list.size() > 0){
-               // for (int i =0; i<list.size();i++){
-                    address = list.get(0);
-                    Log.d(TAG,"geoLocate: found a location "+ address.toString());
+                address = list.get(0);
+                Log.d(TAG,"geoLocate: found a location "+ address.toString());
 
-                   /* LatLng latLng = new LatLng(address.getLatitude(), address.getLongitude());
-                    options.position(latLng).title(title);
+                String title = address.getCountryCode().concat("-").concat(address.getCountryName()).concat("-").concat(address.getAddressLine(0));
 
-                    mMap.addMarker(options);*/
-                    String title = address.getCountryCode().concat("-").concat(address.getCountryName()).concat("-").concat(address.getAddressLine(0));
-                    moveCamera(new LatLng(address.getLatitude(), address.getLongitude()), DEFAULT_ZOOM, title);
-                    mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
-                //}
+                moveCamera(new LatLng(address.getLatitude(), address.getLongitude()), title);
+                mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
 
             }else{
                 Log.d(TAG,"geoLocate: Location not found");
@@ -248,7 +200,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void getDeviceLocation() {
         Log.d(TAG, "getDeviceLocation: getting the devices current location.");
 
-        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        FusedLocationProviderClient mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         try{
             if(mLocationPermissionsGranted){
 
@@ -258,10 +210,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     public void onComplete(@NonNull Task task) {
                         if(task.isSuccessful()){
                             Log.d(TAG, "onComplete: found location!");
-                            Location currentLocation = (Location) task.getResult();
+                            currentLocation = (Location) task.getResult();
+
                             myOptions = new MarkerOptions().position(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude())).title("My Location");
                             moveCamera(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()),
-                                    DEFAULT_ZOOM,
                                     "My Location");
 
                         }else{
@@ -277,9 +229,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     //moveCamera()
-    private void moveCamera(@NonNull LatLng latLng, float zoom, String title){
+    private void moveCamera(@NonNull LatLng latLng, String title){
         Log.d(TAG, "moveCamera: moving the camera to the: lat: "+ latLng.latitude + " , lng: "+latLng.longitude );
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, DEFAULT_ZOOM));
 
         mMap.setInfoWindowAdapter(new CustomInfoWindowAdapter(MapsActivity.this));
 
@@ -301,81 +253,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     //getUrl()
-    private String getUrl(LatLng origin, LatLng dest, String directionMode) {
+    private String getUrl(LatLng origin, LatLng dest) {
         // Origin of route
         String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
         // Destination of route
         String str_dest = "destination=" + dest.latitude + "," + dest.longitude;
         // Mode
-        String mode = "mode=" + directionMode;
+        String mode = "mode=" + "driving";
         // Building the parameters to the web service
         String parameters = str_origin + "&" + str_dest + "&" + mode;
         // Output format
         String output = "json";
         // Building the url to the web service
-        String newUrl = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters + "&key=" + getString(R.string.google_maps_key);
-        return newUrl;
-    }
-
-    /*
-    private void moveCamera(LatLng latLng, float zoom, PlaceInfo placeInfo){
-        Log.d(TAG, "moveCamera: moving the camera to: lat: " + latLng.latitude + ", lng: " + latLng.longitude );
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
-
-        mMap.clear();
-
-        mMap.setInfoWindowAdapter(new CustomInfoWindowAdapter(MapsActivity.this));
-
-        if(placeInfo != null){
-            try{
-                String snippet = "Address: " + placeInfo.getAddress() + "\n" +
-                        "Phone Number: " + placeInfo.getPhoneNumber() + "\n" +
-                        "Website: " + placeInfo.getWebsiteUri() + "\n" +
-                        "Price Rating: " + placeInfo.getRating() + "\n";
-
-                MarkerOptions options = new MarkerOptions()
-                        .position(latLng)
-                        .title(placeInfo.getName()+ placeInfo.getAddress())
-                        .snippet(snippet);
-                mMarker = mMap.addMarker(options);
-
-            }catch (NullPointerException e){
-                Log.e(TAG, "moveCamera: NullPointerException: " + e.getMessage() );
-            }
-        }else{
-            mMap.addMarker(new MarkerOptions().position(latLng));
-        }
-
-        hideSoftKeyboard();
-    }
-*/
-    //isServiceOK()
-    public boolean isServicesOK(){
-        Log.d(TAG, "isServicesOK: checking google services version");
-
-        int available = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(MapsActivity.this);
-
-        if(available == ConnectionResult.SUCCESS){
-            Log.d(TAG, "isServicesOK: Google Play Services is working");
-            return true;
-        }else if(GoogleApiAvailability.getInstance().isUserResolvableError(available)){
-            Log.d(TAG, "isServiceOK: an error occured but we can fix it");
-            Dialog dialog = GoogleApiAvailability.getInstance().getErrorDialog(MapsActivity.this, available,ERROR_DIALOG_REQUEST);
-            dialog.show();
-        }else{
-            Toast.makeText(this, "You can't make map requests", Toast.LENGTH_SHORT).show();
-            return false;
-        }
-        return true;
+        return "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters + "&key=" + getString(R.string.google_maps_key);
     }
 
     //initMap()
     private void initMap(){
         Log.d(TAG, "initMap: initializing map");
-        mapFragment = (SupportMapFragment) getSupportFragmentManager()
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        mapView = mapFragment.getView();
     }
 
     //getLocationPermission()
