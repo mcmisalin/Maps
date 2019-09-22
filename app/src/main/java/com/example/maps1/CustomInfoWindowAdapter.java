@@ -2,6 +2,7 @@ package com.example.maps1;
 
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.TextView;
@@ -26,14 +27,15 @@ public class CustomInfoWindowAdapter implements GoogleMap.InfoWindowAdapter {
     private void rendowWindowText(Marker marker, View view){
 
         String title = marker.getTitle();
-        TextView tvTitle = (TextView) view.findViewById(R.id.title);
+        Log.d("tag","marker title:"+title);
+        TextView tvTitle = view.findViewById(R.id.title);
 
         if(!title.equals("")){
             tvTitle.setText(title);
         }
 
-        String snippet = marker.getSnippet();
-        TextView tvSnippet = (TextView) view.findViewById(R.id.snippet);
+        String snippet = marker.getPosition().toString();
+        TextView tvSnippet = view.findViewById(R.id.snippet);
 
         if(!snippet.equals("")){
             tvSnippet.setText(snippet);

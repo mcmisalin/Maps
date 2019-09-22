@@ -5,8 +5,13 @@
     <string name="hybrid_map">Hybrid Map</string>
     <string name="satellite_map">Satellite Map</string>
     <string name="terrain_map">Terrain Map</string>
-    <string name="title_activity_main">Main Activity</string>
+    <string name="title_activity_main">FindIT</string>
     <string name="next">Next</string>
     <string name="api_key">AIzaSyDYGhmOqOx7vbmRft8tTDM3YMZ-caJudpY</string>
     <string name="title_activity_search">Main Activity</string>
+    <string name="magnify">Magnify</string>
+    <string name="Search_text">Enter Address, City or Zip Code</string>
+    <string name="get_directions">Get Directions</string>
+    <string name="gps_picture">Gps Picture</string>
+    <string name="info_picture">Info Picture</string>
 </resources>

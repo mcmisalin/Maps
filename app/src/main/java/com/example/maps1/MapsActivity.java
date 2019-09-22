@@ -50,6 +50,8 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -74,7 +76,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, TaskLoadedCallback {
 
     //global variables
     private static final String TAG = "MapsActivity";
@@ -90,35 +92,37 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LocationRequest locationRequest;
     private LocationCallback locationCallback;
     private GoogleMap mMap;
-    private List<Marker> mMarkers = new ArrayList<Marker>();
+    private List<Marker> mMarkers = new ArrayList<>();
     private SupportMapFragment mapFragment;
     private List<AutocompletePrediction> predictionList;
     private PlacesClient placesClient;
     private Location currentLocation;
     private PlaceInfo mPlace;
     private Marker mMarker;
-
+    private MarkerOptions options;
+    private MarkerOptions myOptions;
     private View mapView;
-
+    private Polyline currentPolyline;
+    private String uUrl;
 
     //widgets
     private EditText mSearchText;
-    private ImageView mGps, mInfo, mPlacePicker;
+    private ImageView mGps, mInfo;
+    private Button bGetDir;
 
     // onCreate()
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        mSearchText = (EditText) findViewById(R.id.input_search);
-        mGps = (ImageView) findViewById(R.id.ic_gps);
-        mInfo = (ImageView) findViewById(R.id.place_info);
-        mPlacePicker = (ImageView) findViewById(R.id.place_picker);
+        mSearchText = findViewById(R.id.input_search);
+        mGps = findViewById(R.id.ic_gps);
+        mInfo =  findViewById(R.id.place_info);
+        bGetDir =  findViewById(R.id.btn_get_dir);
 
         getLocationPermission();
 
     }
-
 
     //init()
     private void init(){
@@ -133,6 +137,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         || keyEvent.getAction() == KeyEvent.KEYCODE_ENTER){
 
                     //execute our method for searching
+                    mMap.clear();
                     geoLocate();
                 }
 
@@ -154,10 +159,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Log.d(TAG, "onClick: clicked place info");
                 try{
                     if(mMarker.isInfoWindowShown()){
-                        mMarker.hideInfoWindow();
+                        mMarkers.get(0).hideInfoWindow();
                     }else{
-                        Log.d(TAG, "onClick: place info: " + mMarker.getTitle().toString());
-                        mMarker.showInfoWindow();
+                        Log.d(TAG, "onClick: place info: " + mMarker.getTitle());
+                        mMarkers.get(0).showInfoWindow();
                     }
                 }catch (NullPointerException e){
                     Log.e(TAG, "onClick: NullPointerException: " + e.getMessage() );
@@ -165,6 +170,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
+        bGetDir.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Log.d(TAG, "onClick: clicked get directions");
+                try{
+                    uUrl = getUrl(myOptions.getPosition(),options.getPosition(),"driving");
+                    new FetchURL(MapsActivity.this).execute(uUrl, "driving");
+                }catch(Exception e){
+                    Log.d(TAG,"Exception: "+e.getMessage());
+                }
+
+            }
+        });
 
         hideSoftKeyboard();
     }
@@ -176,20 +194,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         String searchString = mSearchText.getText().toString();
 
         Geocoder geocoder = new Geocoder(MapsActivity.this);
-        List<Address> list = new ArrayList<>();
+        List<Address> list;
         try {
-           list = geocoder.getFromLocationName(searchString, 1);
+
+           list = geocoder.getFromLocationName(searchString, 6);
+
+            Address address;
+            if(list.size() > 0){
+               // for (int i =0; i<list.size();i++){
+                    address = list.get(0);
+                    Log.d(TAG,"geoLocate: found a location "+ address.toString());
+
+                   /* LatLng latLng = new LatLng(address.getLatitude(), address.getLongitude());
+                    options.position(latLng).title(title);
+
+                    mMap.addMarker(options);*/
+                    String title = address.getCountryCode().concat("-").concat(address.getCountryName()).concat("-").concat(address.getAddressLine(0));
+                    moveCamera(new LatLng(address.getLatitude(), address.getLongitude()), DEFAULT_ZOOM, title);
+                    mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
+                //}
+
+            }else{
+                Log.d(TAG,"geoLocate: Location not found");
+            }
+
             }catch(IOException e){
             Log.d(TAG, "geolocate: IOException: "+ e.getMessage());
         }
-        if(list.size() > 0){
-            Address address = list.get(0);
-            Log.d(TAG,"geoLocate: found a location "+ address.toString());
-            //Toast.makeText(this, address.toString(), Toast.LENGTH_SHORT).show();
 
-            moveCamera(new LatLng(address.getLatitude(), address.getLongitude()), DEFAULT_ZOOM,
-                    (address.getCountryCode().concat("-").concat(address.getCountryName()).concat("\n-").concat(address.getLocality()).concat("\n-").concat(address.getAddressLine(0))));
-        }
     }
 
     //onMapReady()
@@ -227,7 +259,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         if(task.isSuccessful()){
                             Log.d(TAG, "onComplete: found location!");
                             Location currentLocation = (Location) task.getResult();
-
+                            myOptions = new MarkerOptions().position(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude())).title("My Location");
                             moveCamera(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()),
                                     DEFAULT_ZOOM,
                                     "My Location");
@@ -249,12 +281,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Log.d(TAG, "moveCamera: moving the camera to the: lat: "+ latLng.latitude + " , lng: "+latLng.longitude );
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
 
+        mMap.setInfoWindowAdapter(new CustomInfoWindowAdapter(MapsActivity.this));
+
         for (Marker marker: mMarkers){
             marker.remove();
         }
         mMarkers.clear();
 
-        MarkerOptions options= new MarkerOptions()
+        options= new MarkerOptions()
                 .position(latLng)
                 .title(title);
 
@@ -264,6 +298,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         hideSoftKeyboard();
+    }
+
+    //getUrl()
+    private String getUrl(LatLng origin, LatLng dest, String directionMode) {
+        // Origin of route
+        String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
+        // Destination of route
+        String str_dest = "destination=" + dest.latitude + "," + dest.longitude;
+        // Mode
+        String mode = "mode=" + directionMode;
+        // Building the parameters to the web service
+        String parameters = str_origin + "&" + str_dest + "&" + mode;
+        // Output format
+        String output = "json";
+        // Building the url to the web service
+        String newUrl = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters + "&key=" + getString(R.string.google_maps_key);
+        return newUrl;
     }
 
     /*
@@ -356,11 +407,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Log.d(TAG, "onRequestPermissionsResult: called.");
         mLocationPermissionsGranted = false;
 
-        switch (requestCode){
-            case LOCATION_PERMISSION_REQUEST_CODE:{
+        if (requestCode==LOCATION_PERMISSION_REQUEST_CODE){
                 if(grantResults.length > 0){
-                    for (int i =0; i< grantResults.length ; i++){
-                        if(grantResults[i] != PackageManager.PERMISSION_GRANTED){
+                    for (int grantResult : grantResults) {
+                        if (grantResult != PackageManager.PERMISSION_GRANTED) {
                             mLocationPermissionsGranted = false;
                             Log.d(TAG, "onRequestPermissionsResult: permitssions failed.");
                             return;
@@ -370,7 +420,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     Log.d(TAG, "onRequestPermissionsResult: permitssions granted.");
                     //initialize our map
                     initMap();
-                }
             }
         }
     }
@@ -420,5 +469,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             }
         }
+    }
+
+    @Override
+    public void onTaskDone(Object... values) {
+        if(currentPolyline != null)
+            currentPolyline.remove();
+
+        currentPolyline = mMap.addPolyline((PolylineOptions) values[0]);
     }
 }
