@@ -21,7 +21,7 @@
             android:layout_height="128dp"
             android:layout_column="1"
             android:layout_row="1"
-            app:srcCompat="@drawable/map_img" />
+            app:srcCompat="@drawable/flat_map" />
 
         <TextView
             android:layout_width="match_parent"
@@ -32,7 +32,7 @@
             android:layout_row="2"
             android:layout_marginTop="20dp"
             android:paddingBottom="250dp"
-            android:text="Welcome to the Maps!"
+            android:text="Welcome to FindIT!"
             android:textColor="#ffffff"
             android:textSize="39sp"/>
     </GridLayout>

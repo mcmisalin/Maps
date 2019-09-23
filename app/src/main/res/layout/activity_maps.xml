@@ -73,7 +73,7 @@
 
     <Button
         android:layout_width="match_parent"
-        android:layout_height="60dp"
+        android:layout_height="50dp"
         android:layout_alignBottom="@id/map"
         android:text="@string/get_directions"
         android:background="@drawable/mybutton"

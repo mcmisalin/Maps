@@ -96,7 +96,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         || keyEvent.getAction() == KeyEvent.KEYCODE_ENTER){
 
                     //execute our method for searching
-                    mMap.clear();
                     geoLocate();
                 }
 
@@ -134,7 +133,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onClick(View view) {
                 Log.d(TAG, "onClick: clicked get directions");
                 try{
-                    uUrl = getUrl(myOptions.getPosition(),options.getPosition());
+                    if(currentPolyline != null)
+                        currentPolyline.remove();
+
+                    uUrl = getUrl(myOptions.getPosition(), options.getPosition());
                     new FetchURL(MapsActivity.this).execute(uUrl, "driving");
                 }catch(Exception e){
                     Log.d(TAG,"Exception: "+e.getMessage());
@@ -235,16 +237,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         mMap.setInfoWindowAdapter(new CustomInfoWindowAdapter(MapsActivity.this));
 
-        for (Marker marker: mMarkers){
-            marker.remove();
-        }
-        mMarkers.clear();
-
         options= new MarkerOptions()
                 .position(latLng)
                 .title(title);
 
         if(!title.equals("My Location")) {
+            for (Marker marker: mMarkers){
+                marker.remove();
+            }
+
+            mMarkers.clear();
+            mMap.clear();
+
             mMarker = mMap.addMarker(options);
             mMarkers.add(mMarker);
         }
@@ -369,6 +373,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    //onTaskDone()
     @Override
     public void onTaskDone(Object... values) {
         if(currentPolyline != null)
